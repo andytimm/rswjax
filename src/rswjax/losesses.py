@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+from numbers import Number
 
 class EqualityLoss():
 
