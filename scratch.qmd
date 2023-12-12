@@ -3,6 +3,9 @@
 
 ```{python}
 import rswjax
+```
 
-x = EqualityLoss()
+
+```{python}
+x = rswjax.EqualityLoss(10)
 ```
