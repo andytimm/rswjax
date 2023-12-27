@@ -33,10 +33,10 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     u = warm_start.get("u", jnp.zeros(n))
 
     # Constructing and factorizing the Q matrix with scipy and qdldl
-    F_np = np.array(F)
+ 
     Q = sparse.bmat([
-        [2 * sparse.eye(n), F_np.T],
-        [F_np, -sparse.eye(m)]
+        [2 * sparse.eye(n), F.T],
+        [F, -sparse.eye(m)]
     ])
     factor = qdldl.Solver(Q)
 
