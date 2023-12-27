@@ -13,7 +13,7 @@ from numpy import linalg
 import rswjax
 
 np.random.seed(5)
-n = 100
+n = 10000
 age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
@@ -36,6 +36,9 @@ w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
 
 ```
 
+```{python}
+out
+```
 
 ```{python}
 import cProfile
@@ -46,7 +49,7 @@ import pandas as pd
 import numpy as np
 
 np.random.seed(5)
-n = 100
+n = 10000
 age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
