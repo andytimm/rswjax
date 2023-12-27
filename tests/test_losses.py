@@ -1,6 +1,7 @@
 import cvxpy as cp
 import numpy as np
 import rswjax
+from rswjax.losses import _entropy_prox
 
 m = 10
 f = np.random.randn(m)
@@ -30,3 +31,15 @@ def test_least_squares_loss():
     cp.Problem(cp.Minimize(1 / 2 * cp.sum_squares(cp.multiply(d, fhat - fdes)) +
                             1 / (2 * lam) * cp.sum_squares(fhat - f))).solve()
     np.testing.assert_allclose(fhat.value, lstsq.prox(f, lam))
+
+def test_entropy_prox():
+    f = np.random.uniform(0, 1, size=m)
+    f /= f.sum()
+    fdes = np.random.uniform(0, 1, size=m)
+    fdes /= fdes.sum()
+
+    fhat = cp.Variable(m)
+    cp.Problem(cp.Minimize(cp.sum(-cp.entr(fhat)) +
+                           1 / (2 * lam) * cp.sum_squares(fhat - f))).solve()
+    np.testing.assert_allclose(
+        fhat.value, _entropy_prox(f, lam), atol=1e-5)

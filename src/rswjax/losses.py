@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-import tensorflow_probability.substrates.jax as tfp
+import tensorflow_probability.substrates.jax.math as tfp
 from numbers import Number
 
 class EqualityLoss():
@@ -48,4 +48,4 @@ class LeastSquaresLoss():
 def _entropy_prox(f, lam):
     # I'm hopeful this'll become native soon via https://github.com/google/jax/issues/13680;
     # in the meantime this will do
-    return lam * jnp.real(tfp.lambertw(jnp.exp(f / lam - 1) / lam, tol=1e-10))
+    return lam * jnp.real(tfp.lambertw(jnp.exp(f / lam - 1) / lam))
