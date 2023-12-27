@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 import tensorflow_probability.substrates.jax.math as tfp
+from jax.scipy.special import kl_div
 from numbers import Number
 
 class EqualityLoss():
@@ -49,3 +50,18 @@ def _entropy_prox(f, lam):
     # I'm hopeful this'll become native soon via https://github.com/google/jax/issues/13680;
     # in the meantime this will do
     return lam * jnp.real(tfp.lambertw(jnp.exp(f / lam - 1) / lam))
+
+class KLLoss():
+
+    def __init__(self, fdes, scale=1):
+        if isinstance(fdes, Number):
+            fdes = jnp.array([fdes])
+        self.fdes = fdes
+        self.m = fdes.size
+        self.scale = scale
+
+    def prox(self, f, lam):
+        return _entropy_prox(f + lam * self.scale * jnp.log(self.fdes), lam * self.scale)
+
+    def evaluate(self, f):
+        return self.scale * jnp.sum(kl_div(f, self.fdes))

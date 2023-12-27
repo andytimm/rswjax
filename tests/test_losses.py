@@ -43,3 +43,10 @@ def test_entropy_prox():
                            1 / (2 * lam) * cp.sum_squares(fhat - f))).solve()
     np.testing.assert_allclose(
         fhat.value, _entropy_prox(f, lam), atol=1e-5)
+    
+    def test_kl_loss():
+        kl = rswjax.KLLoss(fdes, scale=.5)
+        fhat = cp.Variable(m, nonneg=True)
+        cp.Problem(cp.Minimize(.5 * (cp.sum(-cp.entr(fhat) - cp.multiply(fhat, np.log(fdes)))) +
+                            1 / (2 * lam) * cp.sum_squares(fhat - f))).solve()
+        np.testing.assert_allclose(fhat.value, kl.prox(f, lam), atol=1e-5)
