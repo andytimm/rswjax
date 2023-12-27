@@ -31,6 +31,19 @@ class KLRegularizer():
 
     def prox(self, w, lam):
         return self.entropy_reg.prox(w + lam * jnp.log(self.prior), lam)
+    
+# No personal use for this, so probably won't implement unless requested
+class CardinalityRegularizer():
+
+    def __init__(self, k):
+        raise NotImplementedError
+        self.k = k
+
+    def prox(self, w, lam):
+        out = jnp.copy(w)
+        idx = jnp.argsort(w)[:-self.k]
+        out[idx] = 0.
+        return out
 
 class BooleanRegularizer():
 
