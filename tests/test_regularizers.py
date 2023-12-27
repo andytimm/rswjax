@@ -3,43 +3,43 @@ import cvxpy as cp
 import numpy as np
 import rswjax
 
-np.random.seed(605)
-w = np.random.randn(10)
-prior = np.random.uniform(10)
-prior /= 10
-lam = .5
+@pytest.fixture
+def setup_data():
+    np.random.seed(605)
+    w = np.random.randn(10)
+    prior = np.random.uniform(10)
+    prior /= 10
+    lam = .5
+    return w, prior, lam
 
-def test_zero_regularizer():
+# Tests
+def test_zero_regularizer(setup_data):
+    w, _, _ = setup_data
     zero_reg = rswjax.ZeroRegularizer()
     np.testing.assert_allclose(zero_reg.prox(w, .5), w)
 
-def test_entropy_regularizer():
+def test_entropy_regularizer(setup_data):
+    w, _, lam = setup_data
     entropy_reg = rswjax.EntropyRegularizer()
     what = cp.Variable(10)
     cp.Problem(cp.Minimize(-cp.sum(cp.entr(what)) + 1 /
                            (2 * lam) * cp.sum_squares(what - w))).solve(solver=cp.ECOS)
     np.testing.assert_allclose(what.value, entropy_reg.prox(w, lam), atol=1e-4)
 
-def test_kl_regularizer():
+def test_kl_regularizer(setup_data):
+    w, prior, lam = setup_data
     kl_reg = rswjax.KLRegularizer(prior)
     what = cp.Variable(10)
     cp.Problem(cp.Minimize(-cp.sum(cp.entr(what)) - cp.sum(cp.multiply(what, np.log(prior))) + 1 /
                            (2 * lam) * cp.sum_squares(what - w))).solve(solver=cp.ECOS)
     np.testing.assert_allclose(what.value, kl_reg.prox(w, lam), atol=1e-4)
 
-def test_boolean_regularizer():
-    k = 3  # Example value for k
-
-    # Create an instance of BooleanRegularizer
+def test_boolean_regularizer(setup_data):
+    w, _, _ = setup_data
+    k = 3
     regularizer = rswjax.BooleanRegularizer(k)
-
-    # Apply the prox method
-    result = regularizer.prox(w, None)  # Assuming lam is not used in your current implementation
-
-    # Manually compute expected result
+    result = regularizer.prox(w, None)
     expected = np.zeros_like(w)
-    idx = np.argsort(w)[-k:]  # Get indices of the top k elements
+    idx = np.argsort(w)[-k:]
     expected[idx] = 1.0 / k
-
-    # Assert that the result is as expected
     np.testing.assert_allclose(result, expected, atol=1e-4)

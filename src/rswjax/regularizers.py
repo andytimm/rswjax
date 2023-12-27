@@ -25,6 +25,9 @@ class EntropyRegularizer():
 
 class KLRegularizer():
 
+    # quick note: this is broken is rsw's latest release;
+    # the EntropyRegularizer class was updated to take a limit #instead of a upper and lower bound
+    # I've fixed that here, but if you don't want a symmetric lower/upper bound it's easy to modify
     def __init__(self, prior, limit=None):
         self.prior = prior
         self.entropy_reg = EntropyRegularizer(limit)
