@@ -21,7 +21,8 @@ def test_equality_loss(setup_data):
     fhat = cp.Variable(m)
     cp.Problem(cp.Minimize(1 / lam * cp.sum_squares(fhat - f)),
                 [fhat == fdes]).solve()
-    np.testing.assert_allclose(fhat.value, equality.prox(f, lam))
+    # Call prox with only the required argument
+    np.testing.assert_allclose(fhat.value, equality.prox(f))
 
 def test_inequality_loss(setup_data):
     m, f, fdes, lam, lower, upper = setup_data

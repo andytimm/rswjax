@@ -5,15 +5,15 @@ from jax.scipy.special import kl_div
 from numbers import Number
 from rswjax.native_lambertw import lambertw
 
-def jit_prox_equality(fdes):
-    def prox(f, lam):
-        return fdes
-    return jit(prox)
 
 def jit_prox_inequality(fdes, lower, upper):
     def prox(f, lam):
         return jnp.clip(f, fdes + lower, fdes + upper)
     return jit(prox)
+
+@jit
+def prox_equality(f, fdes):
+    return fdes
 
 class EqualityLoss:
     def __init__(self, fdes):
@@ -21,7 +21,9 @@ class EqualityLoss:
             fdes = jnp.array([fdes])
         self.fdes = fdes
         self.m = fdes.size
-        self.prox = jit_prox_equality(fdes)
+
+    def prox(self, f):
+        return prox_equality(f, self.fdes)
 
 class InequalityLoss:
     def __init__(self, fdes, lower, upper):
@@ -52,9 +54,8 @@ class LeastSquaresLoss():
         return jnp.sum(jnp.square(self.diag_weight * (f - self.fdes)))
 
 
+@jit
 def _entropy_prox(f, lam):
-    # I'm hopeful this'll become native soon via https://github.com/google/jax/issues/13680;
-    # in the meantime this will do
     return lam * jnp.real(lambertw(jnp.exp(f / lam - 1) / lam))
 
 class KLLoss():
