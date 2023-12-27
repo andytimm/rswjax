@@ -8,4 +8,6 @@ import rswjax
 
 ```{python}
 x = rswjax.EqualityLoss(10)
+
+x.prox()
 ```

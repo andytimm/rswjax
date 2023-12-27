@@ -15,6 +15,8 @@ jaxlib = "^0.4.21"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.27.1"
+pytest = "^7.4.3"
+cvxpy = "^1.4.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
