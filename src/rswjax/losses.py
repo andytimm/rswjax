@@ -1,32 +1,37 @@
 import jax.numpy as jnp
+from jax import jit
 import tensorflow_probability.substrates.jax.math as tfp
 from jax.scipy.special import kl_div
 from numbers import Number
 
-class EqualityLoss():
+def jit_prox_equality(fdes):
+    def prox(f, lam):
+        return fdes
+    return jit(prox)
 
+def jit_prox_inequality(fdes, lower, upper):
+    def prox(f, lam):
+        return jnp.clip(f, fdes + lower, fdes + upper)
+    return jit(prox)
+
+class EqualityLoss:
     def __init__(self, fdes):
         if isinstance(fdes, Number):
             fdes = jnp.array([fdes])
         self.fdes = fdes
         self.m = fdes.size
+        self.prox = jit_prox_equality(fdes)
 
-    def prox(self, f, lam):
-        return self.fdes
-    
-class InequalityLoss():
-
+class InequalityLoss:
     def __init__(self, fdes, lower, upper):
         if isinstance(fdes, Number):
             fdes = jnp.array([fdes])
+        assert (lower <= upper).all()
         self.fdes = fdes
         self.m = fdes.size
         self.lower = lower
         self.upper = upper
-        assert (self.lower <= self.upper).all()
-
-    def prox(self, f, lam):
-        return jnp.clip(f, self.fdes + self.lower, self.fdes + self.upper)
+        self.prox = jit_prox_inequality(fdes, lower, upper)
 
 class LeastSquaresLoss():
 

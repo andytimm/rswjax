@@ -11,6 +11,7 @@ python = ">=3.9"
 jax = "^0.4.21"
 jaxlib = "^0.4.21"
 tensorflow-probability = "^0.23.0"
+qdldl = "^0.1.7.post0"
 
 [tool.poetry.dev-dependencies]
 
