@@ -27,3 +27,19 @@ def test_kl_regularizer():
                            (2 * lam) * cp.sum_squares(what - w))).solve(solver=cp.ECOS)
     np.testing.assert_allclose(what.value, kl_reg.prox(w, lam), atol=1e-4)
 
+def test_boolean_regularizer():
+    k = 3  # Example value for k
+
+    # Create an instance of BooleanRegularizer
+    regularizer = rswjax.BooleanRegularizer(k)
+
+    # Apply the prox method
+    result = regularizer.prox(w, None)  # Assuming lam is not used in your current implementation
+
+    # Manually compute expected result
+    expected = np.zeros_like(w)
+    idx = np.argsort(w)[-k:]  # Get indices of the top k elements
+    expected[idx] = 1.0 / k
+
+    # Assert that the result is as expected
+    np.testing.assert_allclose(result, expected, atol=1e-4)

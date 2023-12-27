@@ -39,6 +39,7 @@ class BooleanRegularizer():
 
     def prox(self, w, lam):
         idx_sort = jnp.argsort(w)
-        new_arr = jnp.zeros(len(w))
-        new_arr[idx_sort[-self.k:]] = 1. / self.k
+        top_k_indices = idx_sort[-self.k:]
+        # adhere to jax array immutability
+        new_arr = jnp.where(jnp.isin(jnp.arange(len(w)), top_k_indices), 1. / self.k, 0)
         return new_arr
