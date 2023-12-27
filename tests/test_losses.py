@@ -22,3 +22,11 @@ def test_inequality_loss():
     cp.Problem(cp.Minimize(1 / lam * cp.sum_squares(fhat - f)),
                [lower <= fhat - fdes, fhat - fdes <= upper]).solve()
     np.testing.assert_allclose(fhat.value, inequality.prox(f, lam))
+
+def test_least_squares_loss():
+    d = np.random.uniform(0, 1, size=m)
+    lstsq = rswjax.LeastSquaresLoss(fdes, d)
+    fhat = cp.Variable(m)
+    cp.Problem(cp.Minimize(1 / 2 * cp.sum_squares(cp.multiply(d, fhat - fdes)) +
+                            1 / (2 * lam) * cp.sum_squares(fhat - f))).solve()
+    np.testing.assert_allclose(fhat.value, lstsq.prox(f, lam))
