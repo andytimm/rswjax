@@ -22,3 +22,23 @@ class EntropyRegularizer():
             what = jnp.clip(what, 1 / (self.limit * w.size),
                            self.limit / w.size)
         return what
+
+class KLRegularizer():
+
+    def __init__(self, prior, limit=None):
+        self.prior = prior
+        self.entropy_reg = EntropyRegularizer(limit)
+
+    def prox(self, w, lam):
+        return self.entropy_reg.prox(w + lam * jnp.log(self.prior), lam)
+
+class BooleanRegularizer():
+
+    def __init__(self, k):
+        self.k = k
+
+    def prox(self, w, lam):
+        idx_sort = jnp.argsort(w)
+        new_arr = jnp.zeros(len(w))
+        new_arr[idx_sort[-self.k:]] = 1. / self.k
+        return new_arr
