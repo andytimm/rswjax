@@ -7,7 +7,80 @@ import rswjax
 
 
 ```{python}
-x = rswjax.EqualityLoss(10)
+import pandas as pd
+import numpy as np
+from numpy import linalg
+import rswjax
 
-x.prox()
+np.random.seed(5)
+n = 100
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+        rswjax.EqualityLoss(5.3)]
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
+
+```
+
+
+```{python}
+import cProfile
+import pstats
+import io
+import rswjax
+import pandas as pd
+import numpy as np
+
+np.random.seed(5)
+n = 100
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+        rswjax.EqualityLoss(5.3)]
+regularizer = rswjax.EntropyRegularizer()
+
+def profile_rswjax():
+    w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
+
+pr = cProfile.Profile()
+pr.enable()
+
+profile_rswjax()
+
+pr.disable()
+s = io.StringIO()
+ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+ps.print_stats()
+print(s.getvalue())
+
+# Optionally, save the stats for visualization
+ps.dump_stats('profile.stats')
+
 ```

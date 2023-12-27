@@ -3,6 +3,7 @@ from jax import jit
 import tensorflow_probability.substrates.jax.math as tfp
 from jax.scipy.special import kl_div
 from numbers import Number
+from rswjax.native_lambertw import lambertw
 
 def jit_prox_equality(fdes):
     def prox(f, lam):
@@ -54,7 +55,7 @@ class LeastSquaresLoss():
 def _entropy_prox(f, lam):
     # I'm hopeful this'll become native soon via https://github.com/google/jax/issues/13680;
     # in the meantime this will do
-    return lam * jnp.real(tfp.lambertw(jnp.exp(f / lam - 1) / lam))
+    return lam * jnp.real(lambertw(jnp.exp(f / lam - 1) / lam))
 
 class KLLoss():
 

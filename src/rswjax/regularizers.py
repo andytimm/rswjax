@@ -1,39 +1,66 @@
+from jax import jit, lax
 import jax.numpy as jnp
-import tensorflow_probability.substrates.jax.math as tfp
+import numpy as np
+import scipy.sparse as sparse
+from functools import partial
+from rswjax.losses import *
+from rswjax.regularizers import *
 
+# Standalone, JIT-compatible prox functions
+@jit
+def prox_zero_regularizer(w, lam):
+    return lax.stop_gradient(w)
+
+@jit
+def prox_entropy_regularizer(w, lam, limit, w_size):
+    what = lam * jnp.real(lambertw(jnp.exp(w / lam - 1) / lam))
+    if limit is not None:
+        what = jnp.clip(what, 1 / (limit * w_size), limit / w_size)
+    return lax.stop_gradient(what)
+
+@jit
+def prox_kl_regularizer(w, lam, prior, limit):
+    return prox_entropy_regularizer(w + lam * jnp.log(prior), lam, limit, w.size)
+
+@partial(jit, static_argnums=2)
+def prox_boolean_regularizer(w, lam, k):
+    # Ensure k is a static value for JIT compilation
+    # You may need to pass it as a static_argnums to jit if k changes between calls
+    top_k_values, top_k_indices = lax.top_k(w, k)
+
+    # Create a mask of zeros
+    mask = jnp.zeros_like(w)
+
+    # Update the mask to set top k positions to 1. / k
+    mask = mask.at[top_k_indices].set(1. / k)
+
+    return lax.stop_gradient(mask)
+
+# Modify the classes to use the standalone functions
 class ZeroRegularizer():
-
     def __init__(self):
         pass
 
     def prox(self, w, lam):
-        return w
+        return prox_zero_regularizer(w, lam)
 
 class EntropyRegularizer():
-
     def __init__(self, limit=None):
         if limit is not None and limit <= 1:
             raise ValueError(f"limit is {limit:.3f}. It must be > 1.")
         self.limit = limit
 
     def prox(self, w, lam):
-        what = lam * jnp.real(tfp.lambertw(jnp.exp(w / lam - 1) / lam))
-        if self.limit is not None:
-            what = jnp.clip(what, 1 / (self.limit * w.size),
-                           self.limit / w.size)
-        return what
+        return prox_entropy_regularizer(w, lam, self.limit, w.size)
 
 class KLRegularizer():
-
-    # quick note: this is broken is rsw's latest release;
-    # the EntropyRegularizer class was updated to take a limit #instead of a upper and lower bound
-    # I've fixed that here, but if you don't want a symmetric lower/upper bound it's easy to modify
     def __init__(self, prior, limit=None):
         self.prior = prior
-        self.entropy_reg = EntropyRegularizer(limit)
+        self.limit = limit
 
     def prox(self, w, lam):
-        return self.entropy_reg.prox(w + lam * jnp.log(self.prior), lam)
+        return prox_kl_regularizer(w, lam, self.prior, self.limit)
+
     
 # No personal use for this, so probably won't implement unless requested
 class CardinalityRegularizer():
@@ -49,13 +76,8 @@ class CardinalityRegularizer():
         return out
 
 class BooleanRegularizer():
-
     def __init__(self, k):
         self.k = k
 
     def prox(self, w, lam):
-        idx_sort = jnp.argsort(w)
-        top_k_indices = idx_sort[-self.k:]
-        # adhere to jax array immutability
-        new_arr = jnp.where(jnp.isin(jnp.arange(len(w)), top_k_indices), 1. / self.k, 0)
-        return new_arr
+        return prox_boolean_regularizer(w, lam, self.k)
