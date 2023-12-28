@@ -13,7 +13,7 @@ from numpy import linalg
 import rswjax
 
 np.random.seed(5)
-n = 10000
+n = 1000
 age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
@@ -30,9 +30,11 @@ funs = [
     lambda x: x.height
 ]
 losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
-        rswjax.EqualityLoss(5.3)]
+          rswjax.EqualityLoss(5.3)]
 regularizer = rswjax.EntropyRegularizer()
-w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .001)
+
+out
 
 ```
 
@@ -86,4 +88,127 @@ print(s.getvalue())
 # Optionally, save the stats for visualization
 ps.dump_stats('profile.stats')
 
+```
+
+
+```{python}
+import pandas as pd
+import numpy as np
+from numpy import linalg
+import rswjax
+```
+
+```{python}
+np.random.seed(5)
+n = 10000
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+```
+
+```{python}
+
+# Real
+print("\n\nExample 1, Max Entropy Weights")
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+          rswjax.EqualityLoss(5.3)]
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .0001,  eps_abs=1e-8)
+
+out
+```
+
+```{python}
+
+# Real
+print("\n\nExample 2, Max Entropy Weights")
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rsw.EqualityLoss(np.array([25,.5,5.3]))]
+regularizer = rsw.EntropyRegularizer()
+w, out, sol = rsw.rsw(df, None, losses, regularizer, .0001,  eps_abs=1e-8,verbose=True)
+
+out
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+from numpy import linalg
+import rswjax
+```
+
+```{python}
+np.random.seed(5)
+n = 100
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+```
+
+```{python}
+
+# Real
+print("\n\nExample 1, Max Entropy Weights")
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+          rswjax.EqualityLoss(5.3)]
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .1,  eps_abs=1e-8,verbose=True)
+
+out
+```
+
+
+```{python}
+np.random.seed(5)
+n = 1000
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+        rswjax.EqualityLoss(5.3)]
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1, verbose=True)
+
+out
 ```

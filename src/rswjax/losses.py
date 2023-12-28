@@ -22,7 +22,7 @@ class EqualityLoss:
         self.fdes = fdes
         self.m = fdes.size
 
-    def prox(self, f):
+    def prox(self, f, lam):
         return prox_equality(f, self.fdes)
 
 class InequalityLoss:
