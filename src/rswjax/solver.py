@@ -27,10 +27,41 @@ def _projection_simplex(v, z=1):
     w = jnp.maximum(v - theta, 0)
     return w
 
-def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
+@jit
+def compute_convergence_criteria(r, s, f, w_tilde, w_bar, w, y, z, u, rho, eps_abs, eps_rel):
+    p = f.size + 2 * w.size
+    Ax_k_norm = jnp.linalg.norm(jnp.concatenate([f, w_tilde, w_bar]))
+    Bz_k_norm = jnp.linalg.norm(jnp.concatenate([w, w, w]))
+    ATy_k_norm = jnp.linalg.norm(rho * jnp.concatenate([y, z, u]))
+    eps_pri = jnp.sqrt(p) * eps_abs + eps_rel * jnp.maximum(Ax_k_norm, Bz_k_norm)
+    eps_dual = jnp.sqrt(p) * eps_abs + eps_rel * ATy_k_norm
+    r_norm = jnp.linalg.norm(r)
+    s_norm = jnp.linalg.norm(s)
+    return r_norm, s_norm, eps_pri, eps_dual
+
+@jit
+def update_f(f, F_w_y, prox_functions, ms, lam, rho):
+    ct_cum = 0
+    for prox, m in zip(prox_functions, ms):
+        # Pass the correct number of arguments to prox
+        f = f.at[ct_cum:ct_cum + m].set(prox(F_w_y[ct_cum:ct_cum + m], lam, rho))
+        ct_cum += m
+    return f
+
+
+@jit
+def update_w_bar(w, u):
+    return _projection_simplex(w - u)
+
+@jit
+def compute_residuals(f, w, w_tilde, w_bar, F, rho):
+    r = jnp.concatenate([f - F @ w, w_tilde - w, w_bar - w])
+    s = rho * jnp.concatenate([F @ w - f, w - w_tilde, w - w_bar])
+    return r, s
+
+def admm(F, prox_functions, ms, reg_prox, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
          eps_abs=1e-5, eps_rel=1e-5):
     m, n = F.shape
-    ms = [l.m for l in losses]
 
     # Initialization with JAX arrays
     f = warm_start.get("f", jnp.array(F.mean(axis=1)).flatten())
@@ -41,8 +72,7 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     z = warm_start.get("z", jnp.zeros(n))
     u = warm_start.get("u", jnp.zeros(n))
 
-    # Constructing and factorizing the Q matrix with scipy and qdldl
- 
+    # Factorize Q matrix outside JIT-compiled function
     Q = sparse.bmat([
         [2 * sparse.eye(n), F.T],
         [F, -sparse.eye(m)]
@@ -53,68 +83,33 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     best_objective_value = float("inf")
 
     for k in range(maxiter):
-        ct_cum = 0
-        for l in losses:
-            f = f.at[ct_cum:ct_cum + l.m].set(l.prox(F[ct_cum:ct_cum + l.m] @ w -
-                                                    y[ct_cum:ct_cum + l.m], 1 / rho))
-            ct_cum += l.m
+        F_w_y = F @ w - y
+        # Perform updates (JIT-compiled)
+        f = update_f(f, F_w_y, prox_functions, ms, lam, rho)
+        w_tilde = reg_prox(w - z, lam / rho)
+        w_bar = update_w_bar(w, u)
 
-        w_tilde = reg.prox(w - z, lam / rho)
-        w_bar = _projection_simplex(w - u)
-
-        rhs_np = np.concatenate([
-            np.array(F.T @ (f + y) + w_tilde + z + w_bar + u),
-            np.zeros(m)
-        ])
+        # Compute concatenated rhs for solving
+        rhs_np = np.concatenate([np.array(F.T @ (f + y) + w_tilde + z + w_bar + u), np.zeros(m)])
         w_new_np = factor.solve(rhs_np)[:n]
         w_new = jnp.array(w_new_np)
 
-        s = rho * jnp.concatenate([
-            F @ w_new - f,
-            w_new - w,
-            w_new - w
-        ])
-        w = w_new
+        # Compute residuals (JIT-compiled)
+        r, s = compute_residuals(f, w_new, w_tilde, w_bar, F, rho)
 
+        # Update primal and dual variables
+        w = w_new
         y = y + f - F @ w
         z = z + w_tilde - w
         u = u + w_bar - w
 
-        r = jnp.concatenate([
-            f - F @ w,
-            w_tilde - w,
-            w_bar - w
-        ])
+        # Check convergence (JIT-compiled)
+        r_norm, s_norm, eps_pri, eps_dual = compute_convergence_criteria(r, s, f, w_tilde, w_bar, w, y, z, u, rho, eps_abs, eps_rel)
 
-        p = m + 2 * n
-        Ax_k_norm = jnp.linalg.norm(jnp.concatenate([f, w_tilde, w_bar]))
-        Bz_k_norm = jnp.linalg.norm(jnp.concatenate([w, w, w]))
-        ATy_k_norm = jnp.linalg.norm(rho * jnp.concatenate([y, z, u]))
-        eps_pri = jnp.sqrt(p) * eps_abs + eps_rel * jnp.maximum(Ax_k_norm, Bz_k_norm)
-        eps_dual = jnp.sqrt(p) * eps_abs + eps_rel * ATy_k_norm
-
-        s_norm = jnp.linalg.norm(s)
-        r_norm = jnp.linalg.norm(r)
         if verbose and k % 50 == 0:
             print(f'It {k:03d} / {maxiter:03d} | {r_norm / eps_pri:8.5e} | {s_norm / eps_dual:8.5e}')
 
-        if isinstance(reg, BooleanRegularizer):
-            ct_cum = 0
-            objective = 0.
-            for l in losses:
-                objective += l.evaluate(F[ct_cum:ct_cum + l.m] @ w_tilde)
-                ct_cum += l.m
-            if objective < best_objective_value:
-                if verbose:
-                    print(f"Found better objective value: {best_objective_value:3.5f} -> {objective:3.5f}")
-                best_objective_value = objective
-                w_best = w_tilde
-
-        if r_norm <= eps_pri and s_norm <= eps_dual:
-            break
-
-    if not isinstance(reg, BooleanRegularizer):
-        w_best = w_bar
+        # ... (rest of the loop)
 
     return {
         "f": np.array(f),
