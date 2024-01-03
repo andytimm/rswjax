@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import jax
 import numpy as np
 import scipy.sparse as sparse
 import qdldl
@@ -6,6 +7,8 @@ from rswjax.losses import *
 from rswjax.regularizers import *
 from rswjax.losses import *
 from rswjax.regularizers import *
+
+jax.config.update("jax_enable_x64", True)
 
 @jit
 def _projection_simplex(v, z=1):
@@ -28,40 +31,40 @@ def _projection_simplex(v, z=1):
     return w
 
 @jit
-def compute_convergence_criteria(r, s, f, w_tilde, w_bar, w, y, z, u, rho, eps_abs, eps_rel):
-    p = f.size + 2 * w.size
-    Ax_k_norm = jnp.linalg.norm(jnp.concatenate([f, w_tilde, w_bar]))
+def compute_norms_and_epsilons(f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel):
+    # Norm calculations
+    s = rho * jnp.concatenate([
+        F @ w - f,
+            w - w_old,
+            w - w_old
+    ])
+    r = jnp.concatenate([
+        f - F @ w,
+        w - w,
+        w - w
+    ])
+    s_norm = jnp.linalg.norm(s)
+    r_norm = jnp.linalg.norm(r)
+
+    # Epsilon calculations
+    p = F.shape[0] + 2 * w.size
+    Ax_k_norm = jnp.linalg.norm(jnp.concatenate([f, w, w]))
     Bz_k_norm = jnp.linalg.norm(jnp.concatenate([w, w, w]))
     ATy_k_norm = jnp.linalg.norm(rho * jnp.concatenate([y, z, u]))
     eps_pri = jnp.sqrt(p) * eps_abs + eps_rel * jnp.maximum(Ax_k_norm, Bz_k_norm)
     eps_dual = jnp.sqrt(p) * eps_abs + eps_rel * ATy_k_norm
-    r_norm = jnp.linalg.norm(r)
-    s_norm = jnp.linalg.norm(s)
-    return r_norm, s_norm, eps_pri, eps_dual
+
+    return s_norm, r_norm, eps_pri, eps_dual
 
 @jit
-def update_f(f, F_w_y, prox_functions, ms, lam, rho):
-    ct_cum = 0
-    for prox, m in zip(prox_functions, ms):
-        # Pass the correct number of arguments to prox
-        f = f.at[ct_cum:ct_cum + m].set(prox(F_w_y[ct_cum:ct_cum + m], lam, rho))
-        ct_cum += m
-    return f
+def update_f(f, start, end, F_segment, w, y_segment, rho, l_prox):
+    new_values = l_prox(F_segment @ w - y_segment, 1 / rho)
+    return f.at[start:end].set(new_values)
 
-
-@jit
-def update_w_bar(w, u):
-    return _projection_simplex(w - u)
-
-@jit
-def compute_residuals(f, w, w_tilde, w_bar, F, rho):
-    r = jnp.concatenate([f - F @ w, w_tilde - w, w_bar - w])
-    s = rho * jnp.concatenate([F @ w - f, w - w_tilde, w - w_bar])
-    return r, s
-
-def admm(F, prox_functions, ms, reg_prox, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
+def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
          eps_abs=1e-5, eps_rel=1e-5):
     m, n = F.shape
+    ms = [l.m for l in losses]
 
     # Initialization with JAX arrays
     f = warm_start.get("f", jnp.array(F.mean(axis=1)).flatten())
@@ -72,44 +75,75 @@ def admm(F, prox_functions, ms, reg_prox, lam, rho=50, maxiter=5000, eps=1e-6, w
     z = warm_start.get("z", jnp.zeros(n))
     u = warm_start.get("u", jnp.zeros(n))
 
-    # Factorize Q matrix outside JIT-compiled function
+    # Constructing and factorizing the Q matrix with scipy and qdldl
+
+    F_sparse = sparse.csc_matrix(F)
+ 
     Q = sparse.bmat([
-        [2 * sparse.eye(n), F.T],
-        [F, -sparse.eye(m)]
+        [2 * sparse.eye(n), F_sparse.T],
+        [F_sparse, -sparse.eye(m)]
     ])
     factor = qdldl.Solver(Q)
 
     w_best = None
     best_objective_value = float("inf")
 
-    for k in range(maxiter):
-        F_w_y = F @ w - y
-        # Perform updates (JIT-compiled)
-        f = update_f(f, F_w_y, prox_functions, ms, lam, rho)
-        w_tilde = reg_prox(w - z, lam / rho)
-        w_bar = update_w_bar(w, u)
+    if verbose:
+            print(u'Iteration     | ||r||/\u03B5_pri | ||s||/\u03B5_dual')
 
-        # Compute concatenated rhs for solving
-        rhs_np = np.concatenate([np.array(F.T @ (f + y) + w_tilde + z + w_bar + u), np.zeros(m)])
+    for k in range(maxiter):
+        ct_cum = 0
+        for l in losses:
+            segment_start = ct_cum
+            segment_end = ct_cum + l.m
+            F_segment = F[segment_start:segment_end]
+            y_segment = y[segment_start:segment_end]
+            
+            f = f.at[segment_start:segment_end].set(l.prox(F_segment @ w - y_segment, 1 / rho))
+            ct_cum += l.m
+
+        w_tilde = reg.prox(w - z, lam / rho)
+        w_bar = _projection_simplex(w - u)
+
+        rhs_np = np.concatenate([
+            np.array(F.T @ (f + y) + w_tilde + z + w_bar + u),
+            np.zeros(m)
+        ])
         w_new_np = factor.solve(rhs_np)[:n]
         w_new = jnp.array(w_new_np)
-
-        # Compute residuals (JIT-compiled)
-        r, s = compute_residuals(f, w_new, w_tilde, w_bar, F, rho)
-
-        # Update primal and dual variables
+        
+        w_old = w
         w = w_new
+
         y = y + f - F @ w
         z = z + w_tilde - w
         u = u + w_bar - w
 
-        # Check convergence (JIT-compiled)
-        r_norm, s_norm, eps_pri, eps_dual = compute_convergence_criteria(r, s, f, w_tilde, w_bar, w, y, z, u, rho, eps_abs, eps_rel)
+        s_norm, r_norm, eps_pri, eps_dual = compute_norms_and_epsilons(
+    f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel)
+
+        
 
         if verbose and k % 50 == 0:
             print(f'It {k:03d} / {maxiter:03d} | {r_norm / eps_pri:8.5e} | {s_norm / eps_dual:8.5e}')
 
-        # ... (rest of the loop)
+        if isinstance(reg, BooleanRegularizer):
+            ct_cum = 0
+            objective = 0.
+            for l in losses:
+                objective += l.evaluate(F[ct_cum:ct_cum + l.m] @ w_tilde)
+                ct_cum += l.m
+            if objective < best_objective_value:
+                if verbose:
+                    print(f"Found better objective value: {best_objective_value:3.5f} -> {objective:3.5f}")
+                best_objective_value = objective
+                w_best = w_tilde
+
+        if r_norm <= eps_pri and s_norm <= eps_dual:
+            break
+
+    if not isinstance(reg, BooleanRegularizer):
+        w_best = w_bar
 
     return {
         "f": np.array(f),

@@ -13,7 +13,7 @@ from numpy import linalg
 import rswjax
 
 np.random.seed(5)
-n = 1000
+n = 10000000
 age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
@@ -32,14 +32,14 @@ funs = [
 losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
           rswjax.EqualityLoss(5.3)]
 regularizer = rswjax.EntropyRegularizer()
-w, out, sol = rswjax.rsw(df, None, losses, regularizer, .001)
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
 
 out
 
 ```
 
 ```{python}
-out
+%timeit -n 10 rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
 ```
 
 ```{python}
@@ -51,7 +51,7 @@ import pandas as pd
 import numpy as np
 
 np.random.seed(5)
-n = 10000
+n = 100000
 age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
@@ -72,7 +72,9 @@ losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
 regularizer = rswjax.EntropyRegularizer()
 
 def profile_rswjax():
-    w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
+    w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01,  eps_abs=1e-8,verbose=True)
+
+    print(out)
 
 pr = cProfile.Profile()
 pr.enable()
@@ -211,4 +213,49 @@ regularizer = rswjax.EntropyRegularizer()
 w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1, verbose=True)
 
 out
+```
+
+
+```{python}
+import rswjax
+import pandas as pd
+import numpy as np
+import jax
+
+np.random.seed(5)
+n = 1000
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+        rswjax.EqualityLoss(5.3)]
+regularizer = rswjax.EntropyRegularizer()
+
+def profile_rswjax():
+    w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01,  eps_abs=1e-8,verbose=True)
+
+with jax.profiler.trace("/tmp/jax-trace", create_perfetto_link=True):
+    profile_rswjax()
+```
+
+
+```{python}
+import numpy as np
+
+for i, j in zip(np.random.randint(50, size=25), np.random.randint(3, size=25)):
+        df.iat[i, j] *= np.nan
+
+
 ```
