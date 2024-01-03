@@ -4,7 +4,6 @@ from jax.scipy.special import kl_div
 from numbers import Number
 from rswjax.native_lambertw import lambertw
 
-
 def jit_prox_inequality(fdes, lower, upper):
     def prox(f, lam):
         return jnp.clip(f, fdes + lower, fdes + upper)
@@ -14,7 +13,11 @@ def jit_prox_inequality(fdes, lower, upper):
 def prox_equality(f, fdes):
     return fdes
 
-class EqualityLoss:
+class Loss:
+    def prox(self, f, lam):
+        raise NotImplementedError
+
+class EqualityLoss(Loss):
     def __init__(self, fdes):
         if isinstance(fdes, Number):
             fdes = jnp.array([fdes])
@@ -24,7 +27,7 @@ class EqualityLoss:
     def prox(self, f, lam):
         return prox_equality(f, self.fdes)
 
-class InequalityLoss:
+class InequalityLoss(Loss):
     def __init__(self, fdes, lower, upper):
         if isinstance(fdes, Number):
             fdes = jnp.array([fdes])
@@ -43,7 +46,7 @@ def jit_prox_ls(f, lam, diag_weight, fdes):
 def jit_evaluate_ls(f, diag_weight, fdes):
     return jnp.sum(jnp.square(diag_weight * (f - fdes)))
 
-class LeastSquaresLoss():
+class LeastSquaresLoss(Loss):
 
     def __init__(self, fdes, diag_weight=None):
         if isinstance(fdes, Number):
@@ -65,7 +68,7 @@ class LeastSquaresLoss():
 def _entropy_prox(f, lam):
     return lam * jnp.real(lambertw(jnp.exp(f / lam - 1) / lam))
 
-class KLLoss():
+class KLLoss(Loss):
 
     def __init__(self, fdes, scale=1):
         if isinstance(fdes, Number):
