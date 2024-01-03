@@ -35,6 +35,14 @@ class InequalityLoss:
         self.upper = upper
         self.prox = jit_prox_inequality(fdes, lower, upper)
 
+@jit
+def jit_prox_ls(f, lam, diag_weight, fdes):
+    return (diag_weight**2 * fdes + f / lam) / (diag_weight**2 + 1 / lam)
+
+@jit
+def jit_evaluate_ls(f, diag_weight, fdes):
+    return jnp.sum(jnp.square(diag_weight * (f - fdes)))
+
 class LeastSquaresLoss():
 
     def __init__(self, fdes, diag_weight=None):
@@ -47,10 +55,10 @@ class LeastSquaresLoss():
         self.diag_weight = diag_weight
 
     def prox(self, f, lam):
-        return (self.diag_weight**2 * self.fdes + f / lam) / (self.diag_weight**2 + 1 / lam)
+        return jit_prox_ls(f, lam, self.diag_weight, self.fdes)
 
     def evaluate(self, f):
-        return jnp.sum(jnp.square(self.diag_weight * (f - self.fdes)))
+        return jit_evaluate_ls(f, self.diag_weight, self.fdes)
 
 
 @jit

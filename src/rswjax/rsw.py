@@ -30,20 +30,35 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
         F = []
         for f in funs:
             F += [df.apply(f, axis=1)]
-        F = np.array(F, dtype=float)
+        F = jnp.array(F, dtype=float)
     else:
         F = np.array(df).T
     m, n = F.shape
 
+    # Function to replace NaNs in a JAX array
+    def replace_nans(F, desired):
+        # Identify the NaN elements
+        is_nan = jnp.isnan(F)
+
+        # Ensure 'desired' is a JAX array and has the right shape
+        desired_jax = jnp.array(desired)
+
+        # This will broadcast 'desired' across NaN positions in F
+        desired_expanded = jnp.expand_dims(desired_jax, axis=1)
+        desired_expanded = jnp.broadcast_to(desired_expanded, F.shape)
+
+        # Replace NaNs with the corresponding values from 'desired'
+        F_no_nans = jnp.where(is_nan, desired_expanded, F)
+        return F_no_nans
+
     # remove nans by changing F
-    rows_nan, cols_nan = np.where(jnp.isnan(F))
+    # Prepare 'desired' array based on 'losses'
     desireds = [l.fdes for l in losses]
     desired = np.concatenate(desireds)
-    if rows_nan.size > 0:
-        for i in np.unique(rows_nan):
-            F[i, cols_nan[rows_nan == i]] = desired[i]
 
-    #F_sparse = sparse.csc_matrix(F)
+# Replace NaNs in F
+    F = replace_nans(F, desired)
+
     tic = time.time()
     sol = admm(F, losses, regularizer, lam, **kwargs)
     toc = time.time()
