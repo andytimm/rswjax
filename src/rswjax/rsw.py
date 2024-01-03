@@ -43,9 +43,9 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
         for i in np.unique(rows_nan):
             F[i, cols_nan[rows_nan == i]] = desired[i]
 
-    F_sparse = sparse.csc_matrix(F)
+    #F_sparse = sparse.csc_matrix(F)
     tic = time.time()
-    sol = admm(F_sparse, losses, regularizer, lam, **kwargs)
+    sol = admm(F, losses, regularizer, lam, **kwargs)
     toc = time.time()
     if kwargs.get("verbose", False):
         print("ADMM took %3.5f seconds" % (toc - tic))

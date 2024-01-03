@@ -27,8 +27,34 @@ def _projection_simplex(v, z=1):
     w = jnp.maximum(v - theta, 0)
     return w
 
+@jit
+def compute_norms_and_epsilons(f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel):
+    # Norm calculations
+    s = rho * jnp.concatenate([
+        F @ w - f,
+            w - w_old,
+            w - w_old
+    ])
+    r = jnp.concatenate([
+        f - F @ w,
+        w - w,
+        w - w
+    ])
+    s_norm = jnp.linalg.norm(s)
+    r_norm = jnp.linalg.norm(r)
+
+    # Epsilon calculations
+    p = F.shape[0] + 2 * w.size
+    Ax_k_norm = jnp.linalg.norm(jnp.concatenate([f, w, w]))
+    Bz_k_norm = jnp.linalg.norm(jnp.concatenate([w, w, w]))
+    ATy_k_norm = jnp.linalg.norm(rho * jnp.concatenate([y, z, u]))
+    eps_pri = jnp.sqrt(p) * eps_abs + eps_rel * jnp.maximum(Ax_k_norm, Bz_k_norm)
+    eps_dual = jnp.sqrt(p) * eps_abs + eps_rel * ATy_k_norm
+
+    return s_norm, r_norm, eps_pri, eps_dual
+
 def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
-         eps_abs=1e-5, eps_rel=1e-5):
+         eps_abs=1e-3, eps_rel=1e-3):
     m, n = F.shape
     ms = [l.m for l in losses]
 
@@ -42,10 +68,12 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     u = warm_start.get("u", jnp.zeros(n))
 
     # Constructing and factorizing the Q matrix with scipy and qdldl
+
+    F_sparse = sparse.csc_matrix(F)
  
     Q = sparse.bmat([
-        [2 * sparse.eye(n), F.T],
-        [F, -sparse.eye(m)]
+        [2 * sparse.eye(n), F_sparse.T],
+        [F_sparse, -sparse.eye(m)]
     ])
     factor = qdldl.Solver(Q)
 
@@ -68,33 +96,17 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
         ])
         w_new_np = factor.solve(rhs_np)[:n]
         w_new = jnp.array(w_new_np)
-
-        s = rho * jnp.concatenate([
-            F @ w_new - f,
-            w_new - w,
-            w_new - w
-        ])
+        
+        w_old = w
         w = w_new
 
         y = y + f - F @ w
         z = z + w_tilde - w
         u = u + w_bar - w
 
-        r = jnp.concatenate([
-            f - F @ w,
-            w_tilde - w,
-            w_bar - w
-        ])
+        s_norm, r_norm, eps_pri, eps_dual = compute_norms_and_epsilons(
+    f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel)
 
-        p = m + 2 * n
-        Ax_k_norm = jnp.linalg.norm(jnp.concatenate([f, w_tilde, w_bar]))
-        Bz_k_norm = jnp.linalg.norm(jnp.concatenate([w, w, w]))
-        ATy_k_norm = jnp.linalg.norm(rho * jnp.concatenate([y, z, u]))
-        eps_pri = jnp.sqrt(p) * eps_abs + eps_rel * jnp.maximum(Ax_k_norm, Bz_k_norm)
-        eps_dual = jnp.sqrt(p) * eps_abs + eps_rel * ATy_k_norm
-
-        s_norm = jnp.linalg.norm(s)
-        r_norm = jnp.linalg.norm(r)
         if verbose and k % 50 == 0:
             print(f'It {k:03d} / {maxiter:03d} | {r_norm / eps_pri:8.5e} | {s_norm / eps_dual:8.5e}')
 

@@ -32,7 +32,7 @@ funs = [
 losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
           rswjax.EqualityLoss(5.3)]
 regularizer = rswjax.EntropyRegularizer()
-w, out, sol = rswjax.rsw(df, None, losses, regularizer, .001)
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-3, verbose = True)
 
 out
 

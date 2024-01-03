@@ -43,7 +43,7 @@ def test_solver():
         fdes2, -1 * np.ones(m // 2), 1 * np.ones(m // 2))]
     reg = rswjax.EntropyRegularizer()
 
-    sol = rswjax.admm(F, losses, reg, 1, verbose=True)
+    sol = rswjax.admm(F, losses, reg, 1, eps_abs=1e-5, eps_rel=1e-5, verbose=True)
     w = cp.Variable(n)
     cp.Problem(cp.Minimize(.5 * cp.sum_squares(F[:m // 2] @ w - fdes1) - cp.sum(cp.entr(w))),
                [cp.sum(w) == 1, w >= 0, cp.max(cp.abs(F[m // 2:] @ w - fdes2)) <= 1]).solve(solver=cp.ECOS)

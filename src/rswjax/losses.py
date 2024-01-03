@@ -1,6 +1,5 @@
 import jax.numpy as jnp
 from jax import jit
-import tensorflow_probability.substrates.jax.math as tfp
 from jax.scipy.special import kl_div
 from numbers import Number
 from rswjax.native_lambertw import lambertw
