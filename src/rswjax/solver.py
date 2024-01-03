@@ -83,6 +83,9 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     w_best = None
     best_objective_value = float("inf")
 
+    if verbose:
+            print(u'Iteration     | ||r||/\u03B5_pri | ||s||/\u03B5_dual')
+
     for k in range(maxiter):
         ct_cum = 0
         for l in losses:
@@ -110,8 +113,7 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
         s_norm, r_norm, eps_pri, eps_dual = compute_norms_and_epsilons(
     f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel)
 
-        if verbose:
-            print(u'Iteration     | ||r||/\u03B5_pri | ||s||/\u03B5_dual')
+        
 
         if verbose and k % 50 == 0:
             print(f'It {k:03d} / {maxiter:03d} | {r_norm / eps_pri:8.5e} | {s_norm / eps_dual:8.5e}')
