@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import jax
 import numpy as np
 import scipy.sparse as sparse
 import qdldl
@@ -6,6 +7,8 @@ from rswjax.losses import *
 from rswjax.regularizers import *
 from rswjax.losses import *
 from rswjax.regularizers import *
+
+jax.config.update("jax_enable_x64", True)
 
 @jit
 def _projection_simplex(v, z=1):
@@ -54,7 +57,7 @@ def compute_norms_and_epsilons(f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel):
     return s_norm, r_norm, eps_pri, eps_dual
 
 def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
-         eps_abs=1e-3, eps_rel=1e-3):
+         eps_abs=1e-5, eps_rel=1e-5):
     m, n = F.shape
     ms = [l.m for l in losses]
 
@@ -106,6 +109,9 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
 
         s_norm, r_norm, eps_pri, eps_dual = compute_norms_and_epsilons(
     f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel)
+
+        if verbose:
+            print(u'Iteration     | ||r||/\u03B5_pri | ||s||/\u03B5_dual')
 
         if verbose and k % 50 == 0:
             print(f'It {k:03d} / {maxiter:03d} | {r_norm / eps_pri:8.5e} | {s_norm / eps_dual:8.5e}')
