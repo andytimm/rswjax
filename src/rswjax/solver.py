@@ -56,11 +56,6 @@ def compute_norms_and_epsilons(f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel):
 
     return s_norm, r_norm, eps_pri, eps_dual
 
-@jit
-def update_f(f, start, end, F_segment, w, y_segment, rho, l_prox):
-    new_values = l_prox(F_segment @ w - y_segment, 1 / rho)
-    return f.at[start:end].set(new_values)
-
 def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
          eps_abs=1e-5, eps_rel=1e-5):
     m, n = F.shape
@@ -94,12 +89,8 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     for k in range(maxiter):
         ct_cum = 0
         for l in losses:
-            segment_start = ct_cum
-            segment_end = ct_cum + l.m
-            F_segment = F[segment_start:segment_end]
-            y_segment = y[segment_start:segment_end]
-            
-            f = f.at[segment_start:segment_end].set(l.prox(F_segment @ w - y_segment, 1 / rho))
+            f = f.at[ct_cum:ct_cum + l.m].set(l.prox(F[ct_cum:ct_cum + l.m] @ w -
+                                                    y[ct_cum:ct_cum + l.m], 1 / rho))
             ct_cum += l.m
 
         w_tilde = reg.prox(w - z, lam / rho)
