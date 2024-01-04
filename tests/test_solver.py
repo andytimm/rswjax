@@ -39,27 +39,12 @@ def test_solver():
     F = np.random.randn(m, n)
     fdes1 = np.random.randn(m // 2)
     fdes2 = np.random.randn(m // 2)
-    
-    # Create loss instances
-    loss1 = rswjax.LeastSquaresLoss(fdes1)
-    loss2 = rswjax.InequalityLoss(fdes2, -1 * np.ones(m // 2), 1 * np.ones(m // 2))
-    losses = [loss1, loss2]
-
-    # Extract proximal functions and sizes
-    prox_functions = [loss.prox for loss in losses]
-    ms = [loss.m for loss in losses]
-
-    # Regularizer
+    losses = [rswjax.LeastSquaresLoss(fdes1), rswjax.InequalityLoss(
+        fdes2, -1 * np.ones(m // 2), 1 * np.ones(m // 2))]
     reg = rswjax.EntropyRegularizer()
-    reg_prox = reg.prox
 
-    # Call admm with new signature
-    sol = rswjax.admm(F, prox_functions, ms, reg_prox, 1, verbose=True)
-    
-    # Solve equivalent problem with cvxpy for comparison
+    sol = rswjax.admm(F, losses, reg, 1, verbose=True)
     w = cp.Variable(n)
-    cp.Problem(cp.Minimize(0.5 * cp.sum_squares(F[:m // 2] @ w - fdes1) - cp.sum(cp.entr(w))),
+    cp.Problem(cp.Minimize(.5 * cp.sum_squares(F[:m // 2] @ w - fdes1) - cp.sum(cp.entr(w))),
                [cp.sum(w) == 1, w >= 0, cp.max(cp.abs(F[m // 2:] @ w - fdes2)) <= 1]).solve(solver=cp.ECOS)
-
-    # Assert that the solutions are close
     np.testing.assert_allclose(w.value, sol["w"], atol=1e-3)
