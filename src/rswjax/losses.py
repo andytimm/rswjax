@@ -2,7 +2,7 @@ import jax.numpy as jnp
 from jax import jit
 from jax.scipy.special import kl_div
 from numbers import Number
-from rswjax.native_lambertw import lambertw
+from ott.math.utils import lambertw
 
 def jit_prox_inequality(fdes, lower, upper):
     def prox(f, lam):
