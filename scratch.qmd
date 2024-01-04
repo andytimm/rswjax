@@ -13,7 +13,7 @@ from numpy import linalg
 import rswjax
 
 np.random.seed(5)
-n = 10000000
+n = 5000
 age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
@@ -39,7 +39,7 @@ out
 ```
 
 ```{python}
-%timeit -n 10 rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
+%timeit -n 100 rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
 ```
 
 ```{python}

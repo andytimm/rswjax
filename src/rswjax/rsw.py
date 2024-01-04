@@ -36,7 +36,7 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
     m, n = F.shape
 
     # remove nans by changing F
-    rows_nan, cols_nan = np.where(jnp.isnan(F))
+    rows_nan, cols_nan = np.where(np.isnan(F))
     desireds = [l.fdes for l in losses]
     desired = np.concatenate(desireds)
     if rows_nan.size > 0:
