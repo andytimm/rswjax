@@ -22,13 +22,13 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
 
     Arguments:
         - df: Pandas dataframe
-        - funs: functions to apply to each row of df.
+        - funs: functions to apply to each row of df. Function warns if len(losses) != ncols.
         - losses: list of losses, each one of rswjax.EqualityLoss, rswjax.InequalityLoss, rswjax.LeastSquaresLoss,
-            or rswjax.KLLoss()
+            or rswjax.KLLoss.
         - regularizer: One of rswjax.ZeroRegularizer, rswjax.EntropyRegularizer,
             or rswjax.KLRegularizer, rswjax.BooleanRegularizer
         - lam (optional): Regularization hyper-parameter (default=1).
-        - kwargs (optional): additional arguments to be sent to solver. For example: verbose=False,
+        - kwargs (optional): additional arguments to be sent to solver. For example: verbose=True,
             maxiter=5000, rho=50, eps_rel=1e-5, eps_abs=1e-5.
 
     Returns:

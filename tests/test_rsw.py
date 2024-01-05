@@ -55,9 +55,9 @@ def test_array_inputs():
     lambda x: x.height
 ]
 
-    array_of_inputs = np.array([25,.5,5.3])
+    array_of_targets = np.array([25,.5,5.3])
 
-    losses = [rswjax.EqualityLoss(array_of_inputs.flatten())]
+    losses = [rswjax.EqualityLoss(array_of_targets.flatten())]
     regularizer = rswjax.EntropyRegularizer()
     rswjax.rsw(df, funs, losses, regularizer, 1., eps_abs=1e-8, verbose = True)
 

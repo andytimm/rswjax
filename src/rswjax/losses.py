@@ -4,18 +4,15 @@ from jax.scipy.special import kl_div
 from numbers import Number
 from ott.math.utils import lambertw
 
-def jit_prox_inequality(fdes, lower, upper):
-    def prox(f, lam):
-        return jnp.clip(f, fdes + lower, fdes + upper)
-    return jit(prox)
+class Loss:
+    def prox(self, f, lam):
+        raise NotImplementedError
+    
+    # Not all losses must implement an evaluate function, but it's needed for more complex losses. 
 
 @jit
 def prox_equality(f, fdes):
     return fdes
-
-class Loss:
-    def prox(self, f, lam):
-        raise NotImplementedError
 
 class EqualityLoss(Loss):
     def __init__(self, fdes):
@@ -26,6 +23,11 @@ class EqualityLoss(Loss):
 
     def prox(self, f, lam):
         return prox_equality(f, self.fdes)
+    
+def jit_prox_inequality(fdes, lower, upper):
+    def prox(f, lam):
+        return jnp.clip(f, fdes + lower, fdes + upper)
+    return jit(prox)
 
 class InequalityLoss(Loss):
     def __init__(self, fdes, lower, upper):

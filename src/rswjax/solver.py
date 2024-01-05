@@ -8,6 +8,8 @@ from rswjax.regularizers import *
 from rswjax.losses import *
 from rswjax.regularizers import *
 
+# Jax default of 32 is insufficiently accurate.
+# It's possible mixed precision could be viable, but not worth the squeeze right now.
 jax.config.update("jax_enable_x64", True)
 
 @jit
@@ -56,12 +58,12 @@ def compute_norms_and_epsilons(f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel):
 
     return s_norm, r_norm, eps_pri, eps_dual
 
-def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, verbose=False,
+def admm(F, losses, reg, lam, rho=50, maxiter=5000, warm_start={}, verbose=False,
          eps_abs=1e-5, eps_rel=1e-5):
     m, n = F.shape
     ms = [l.m for l in losses]
 
-    # Initialization with JAX arrays
+    # Default warm start values
     f = warm_start.get("f", jnp.array(F.mean(axis=1)).flatten())
     w = warm_start.get("w", jnp.ones(n) / n)
     w_bar = warm_start.get("w_bar", jnp.ones(n) / n)
@@ -71,7 +73,6 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
     u = warm_start.get("u", jnp.zeros(n))
 
     # Constructing and factorizing the Q matrix with scipy and qdldl
-
     F_sparse = sparse.csc_matrix(F)
  
     Q = sparse.bmat([
@@ -88,6 +89,10 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
 
     for k in range(maxiter):
         ct_cum = 0
+        
+        # It might be possible to rewrite the update block to be jittable, but it'd require
+        # a significant refactoring to precalculate all the needed loss evals/proxes and
+        # pass them to a jittable update f. 
         for l in losses:
             f = f.at[ct_cum:ct_cum + l.m].set(l.prox(F[ct_cum:ct_cum + l.m] @ w -
                                                     y[ct_cum:ct_cum + l.m], 1 / rho))

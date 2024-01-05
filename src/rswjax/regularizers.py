@@ -6,10 +6,16 @@ from functools import partial
 from rswjax.losses import *
 from rswjax.regularizers import *
 
-# Standalone, JIT-compatible prox functions
 @jit
 def prox_zero_regularizer(w, lam):
     return lax.stop_gradient(w)
+
+class ZeroRegularizer():
+    def __init__(self):
+        pass
+
+    def prox(self, w, lam):
+        return prox_zero_regularizer(w, lam)
 
 @jit
 def prox_entropy_regularizer(w, lam, limit, w_size):
@@ -17,32 +23,6 @@ def prox_entropy_regularizer(w, lam, limit, w_size):
     if limit is not None:
         what = jnp.clip(what, 1 / (limit * w_size), limit / w_size)
     return lax.stop_gradient(what)
-
-@jit
-def prox_kl_regularizer(w, lam, prior, limit):
-    return prox_entropy_regularizer(w + lam * jnp.log(prior), lam, limit, w.size)
-
-@partial(jit, static_argnums=2)
-def prox_boolean_regularizer(w, lam, k):
-    # Ensure k is a static value for JIT compilation
-    # You may need to pass it as a static_argnums to jit if k changes between calls
-    top_k_values, top_k_indices = lax.top_k(w, k)
-
-    # Create a mask of zeros
-    mask = jnp.zeros_like(w)
-
-    # Update the mask to set top k positions to 1. / k
-    mask = mask.at[top_k_indices].set(1. / k)
-
-    return lax.stop_gradient(mask)
-
-# Modify the classes to use the standalone functions
-class ZeroRegularizer():
-    def __init__(self):
-        pass
-
-    def prox(self, w, lam):
-        return prox_zero_regularizer(w, lam)
 
 class EntropyRegularizer():
     def __init__(self, limit=None):
@@ -52,6 +32,10 @@ class EntropyRegularizer():
 
     def prox(self, w, lam):
         return prox_entropy_regularizer(w, lam, self.limit, w.size)
+
+@jit
+def prox_kl_regularizer(w, lam, prior, limit):
+    return prox_entropy_regularizer(w + lam * jnp.log(prior), lam, limit, w.size)
 
 class KLRegularizer():
     def __init__(self, prior, limit=None):
@@ -74,6 +58,19 @@ class CardinalityRegularizer():
         idx = jnp.argsort(w)[:-self.k]
         out[idx] = 0.
         return out
+
+@partial(jit, static_argnums=2)
+def prox_boolean_regularizer(w, lam, k):
+    # Ensure k is a static value for JIT compilation
+    top_k_values, top_k_indices = lax.top_k(w, k)
+
+    # Create a mask of zeros
+    mask = jnp.zeros_like(w)
+
+    # Update the mask to set top k positions to 1. / k
+    mask = mask.at[top_k_indices].set(1. / k)
+
+    return lax.stop_gradient(mask)
 
 class BooleanRegularizer():
     def __init__(self, k):

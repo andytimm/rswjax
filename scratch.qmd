@@ -32,9 +32,6 @@ funs = [
     lambda x: x.height
 ]
 
-fdes = np.random.uniform(0, 1, size=100)
-fdes /= fdes.sum()
-
 losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
           rswjax.EqualityLoss(5.3)]
 regularizer = rswjax.EntropyRegularizer()
@@ -42,6 +39,97 @@ w, out, sol = rswjax.rsw(df, funs, losses, regularizer, .01, eps_abs=1e-8, verbo
 
 out
 
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+from numpy import linalg
+import rswjax
+
+np.random.seed(5)
+n = 5000
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+# Generate additional covariates
+additional_covariates = {f"covariate_{i}": np.random.normal(0, 1, size=n) if i % 2 == 0 else np.random.choice([0., 1.], p=[.5, .5], size=n) for i in range(4, 21)}
+
+# Update DataFrame
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height,
+    **additional_covariates
+})
+
+
+# Define losses with different random targets
+losses = []
+for col in df.columns:
+    if df[col].nunique() == 2:  # Binary data
+        # Random target between 0 and 1
+        target = np.random.rand()
+    else:  # Continuous data
+        # Random target within a range close to the mean of the column
+        mean_val = df[col].mean()
+        target = np.random.uniform(mean_val * 0.8, mean_val * 1.2)
+    
+    losses.append(rswjax.EqualityLoss(target))
+
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose=True)
+
+out
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+from numpy import linalg
+import rswjax
+
+np.random.seed(5)
+n = 5000
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+# Generate additional covariates
+additional_covariates = {f"covariate_{i}": np.random.normal(0, 1, size=n) if i % 2 == 0 else np.random.choice([0., 1.], p=[.5, .5], size=n) for i in range(4, 101)}
+
+# Update DataFrame
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height,
+    **additional_covariates
+})
+
+
+# Define losses with different random targets
+losses = []
+for col in df.columns:
+    if df[col].nunique() == 2: 
+        # Random target between 0 and 1 - kinda harsh as a test case, but it does let it run
+        target = np.random.rand()
+    else:  # Continuous data
+        # Random target within a range close to the mean of the column
+        # - kinda harsh as a test case, but it does let it run
+        mean_val = df[col].mean()
+        target = np.random.uniform(mean_val * 0.8, mean_val * 1.2)
+    
+    losses.append(rswjax.EqualityLoss(target))
+
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose=True)
+
+out
+```
+
+```{python}
+out
 ```
 
 ```{python}
