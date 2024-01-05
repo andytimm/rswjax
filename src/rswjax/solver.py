@@ -132,11 +132,11 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, eps=1e-6, warm_start={}, ver
 
         if r_norm <= eps_pri and s_norm <= eps_dual:
             break
-
+        
         if np.isnan(r_norm) or np.isnan(s_norm):
             raise ValueError("r_norm or s_norm have NaNed out, usually indicating a poorly formulated\
-                             optimization problem. A common cause with in ADMM is excessively high or\
-                             low values of Lambda or Rho; please sanity check your problem.")
+                            optimization problem. A common cause with in ADMM is excessively high or\
+                            low values of Lambda or Rho; please sanity check your problem.")
 
     if not isinstance(reg, BooleanRegularizer):
         w_best = w_bar

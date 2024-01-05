@@ -1,8 +1,21 @@
 import numpy as np
 import time
-
 from rswjax.solver import admm
 
+#Convenience function for providing user info on fit quality
+def max_pct_difference(list1, list2):
+
+    array1 = np.array(list1)
+    array2 = np.array(list2)
+
+    difference = np.abs(array1 - array2)
+
+    with np.errstate(divide='ignore', invalid='ignore'):
+        percent_difference = np.where(array1 != 0, (difference / array1) * 100, np.nan)
+
+    max_percent_diff = np.nanmax(percent_difference)
+
+    return max_percent_diff
 
 def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
     """Optimal representative sample weighting.
@@ -10,10 +23,10 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
     Arguments:
         - df: Pandas dataframe
         - funs: functions to apply to each row of df.
-        - losses: list of losses, each one of rsw.EqualityLoss, rsw.InequalityLoss, rsw.LeastSquaresLoss,
-            or rsw.KLLoss()
-        - regularizer: One of rsw.ZeroRegularizer, rsw.EntropyRegularizer,
-            or rsw.KLRegularizer, rsw.BooleanRegularizer
+        - losses: list of losses, each one of rswjax.EqualityLoss, rswjax.InequalityLoss, rswjax.LeastSquaresLoss,
+            or rswjax.KLLoss()
+        - regularizer: One of rswjax.ZeroRegularizer, rswjax.EntropyRegularizer,
+            or rswjax.KLRegularizer, rswjax.BooleanRegularizer
         - lam (optional): Regularization hyper-parameter (default=1).
         - kwargs (optional): additional arguments to be sent to solver. For example: verbose=False,
             maxiter=5000, rho=50, eps_rel=1e-5, eps_abs=1e-5.
@@ -40,7 +53,15 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
         for i in np.unique(rows_nan):
             F[i, cols_nan[rows_nan == i]] = desired[i]
 
-    #F_sparse = sparse.csc_matrix(F)
+    
+    if m > len(losses):
+            print("warning! A loss is not defined for all columns, which is usually an error.\
+                   Please double check inputs and outputs for issues closely.")
+            
+    if m < len(losses):
+            print("warning! more losses are passed than columns, which is usually an error.\
+                   Please double check inputs and outputs for issues closely.")
+
     tic = time.time()
     sol = admm(F, losses, regularizer, lam, **kwargs)
     toc = time.time()
@@ -53,4 +74,13 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
     for m in [l.m for l in losses]:
         out += [means[ct:ct + m]]
         ct += m
+
+    if kwargs.get("verbose"):
+         if len(out) != len(sol["f"]):
+            print("losses/columns were not same length, not printing pct difference.")
+         else:
+            max_diff = max_pct_difference(out, sol["f"])
+            print(f"The largest pct difference between desired and achieved weighted values is {max_diff:.2f}%.")
+
+        
     return sol["w_best"], out, sol
