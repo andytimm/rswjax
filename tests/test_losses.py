@@ -19,14 +19,15 @@ def test_equality_loss(setup_data):
     m, f, fdes, lam, _, _ = setup_data
     equality = rswjax.EqualityLoss(fdes)
     fhat = cp.Variable(m)
+
     cp.Problem(cp.Minimize(1 / lam * cp.sum_squares(fhat - f)),
                 [fhat == fdes]).solve()
-    # Call prox with only the required argument
     np.testing.assert_allclose(fhat.value, equality.prox(f,lam))
 
 def test_inequality_loss(setup_data):
     m, f, fdes, lam, lower, upper = setup_data
     inequality = rswjax.InequalityLoss(fdes, lower, upper)
+
     fhat = cp.Variable(m)
     cp.Problem(cp.Minimize(1 / lam * cp.sum_squares(fhat - f)),
                [lower <= fhat - fdes, fhat - fdes <= upper]).solve()
@@ -37,6 +38,7 @@ def test_least_squares_loss(setup_data):
     d = np.random.uniform(0, 1, size=m)
     lstsq = rswjax.LeastSquaresLoss(fdes, d)
     fhat = cp.Variable(m)
+
     cp.Problem(cp.Minimize(1 / 2 * cp.sum_squares(cp.multiply(d, fhat - fdes)) +
                             1 / (2 * lam) * cp.sum_squares(fhat - f))).solve()
     np.testing.assert_allclose(fhat.value, lstsq.prox(f, lam))
@@ -47,8 +49,8 @@ def test_entropy_prox(setup_data):
     f /= f.sum()
     fdes = np.random.uniform(0, 1, size=m)
     fdes /= fdes.sum()
-
     fhat = cp.Variable(m)
+
     cp.Problem(cp.Minimize(cp.sum(-cp.entr(fhat)) +
                            1 / (2 * lam) * cp.sum_squares(fhat - f))).solve(solver=cp.ECOS)
     np.testing.assert_allclose(
@@ -60,10 +62,9 @@ def test_kl_loss(setup_data):
     f /= f.sum()
     fdes = np.random.uniform(0, 1, size=m)
     fdes /= fdes.sum()
-
-
     kl = rswjax.KLLoss(fdes, scale=.5)
     fhat = cp.Variable(m, nonneg=True)
+
     cp.Problem(cp.Minimize(.5 * (cp.sum(-cp.entr(fhat) - cp.multiply(fhat, np.log(fdes)))) +
                         1 / (2 * lam) * cp.sum_squares(fhat - f))).solve(solver=cp.ECOS)
     np.testing.assert_allclose(fhat.value, kl.prox(f, lam), atol=1e-5)

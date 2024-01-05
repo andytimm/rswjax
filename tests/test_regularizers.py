@@ -12,7 +12,7 @@ def setup_data():
     lam = .5
     return w, prior, lam
 
-# Tests
+
 def test_zero_regularizer(setup_data):
     w, _, _ = setup_data
     zero_reg = rswjax.ZeroRegularizer()
