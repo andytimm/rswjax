@@ -13,7 +13,6 @@ jaxlib = "^0.4.21"
 qdldl = "^0.1.7.post0"
 pandas = "^2.1.4"
 ott-jax = "^0.4.5"
-matplotlib = "^3.8.2"
 
 [tool.poetry.dev-dependencies]
 
@@ -21,6 +20,7 @@ matplotlib = "^3.8.2"
 ipykernel = "^6.27.1"
 pytest = "^7.4.3"
 cvxpy = "^1.4.1"
+matplotlib = "^3.8.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
