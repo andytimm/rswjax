@@ -2,7 +2,7 @@
 
 A [Jax](https://github.com/google/jax) implementation of optimal representative sample weighting, drawing heavily on the original `rsw` implementation of Barratt, Angeris, and Boyd ([rsw](https://github.com/cvxgrp/rsw/tree/master)).
 
-Thanks to rewriting some core operations in Jax, it is significantly faster than `rsw` for medium-large datasets, especially those with many columns (ex: 5k+ rows, 20+ columns). For more thoughts on performance, see [Performance](#perf). In addition,
+Thanks to rewriting some core operations in Jax, it is significantly faster than `rsw` for medium-large datasets, especially those with many columns (ex: 5k+ rows, 20+ columns). For more thoughts on performance, see the section below. In addition,
 it adds a number of quality of life improvements, like early stopping if optimization produces NaNs, warnings for common issues like not including loss functions for every column, and a
 broader test suite.
 
@@ -67,7 +67,6 @@ w, out, sol = rswjax.rsw(df, funs, losses, regularizer, .01, eps_abs=1e-8, verbo
 For more details on how one might use the package to do survey weighting, check out my recent [talk](https://andytimm.github.io/posts/NYSOPM_talk_regularized_raking/NYOSPM_talk.html), at [NYOSP](https://nyhackr.org/index.html). The talk uses the original `rsw`, but all ideas should transfer over cleanly.
 
 ## Performance
-[](#perf)
 
 `rswjax` is generally faster than `rsw` for medium-large datasets, especially those with many columns. As both packages take neglible amounts of time for data ~3k rows or less,
 `rswjax` should be superior for many but not all applications.
@@ -111,14 +110,14 @@ m=100- 183s
 (Note that this test case uses randomly generated targets and data, and is therfore hard to weight in high dimensions. Thus, most well specified real world examples
 should run significantly faster due to early termination.)
 
-This speed is achieved by keeping the core qdldl factorization and solve using the `qdldl` package, but using JITed ([just-in-time compiled](https://github.com/google/jax?tab=readme-ov-file#compilation-with-jit)) rewrites of many pieces of the admm solver, losses, and regularizers. There are still some minor opportunities to speed up the package by further refactoring the code to allow greater portions to be JITed, or by optimizing how and when data is converted back and forth between `numpy` and `jax.numpy`.
+This speed is achieved by doing the core qdldl factorization and solve using the `qdldl` package, but using JITed ([just-in-time compiled](https://github.com/google/jax?tab=readme-ov-file#compilation-with-jit)) rewrites of many pieces of the admm solver, losses, and regularizers. There are still some minor opportunities to speed up the package by further refactoring the code to allow greater portions to be JITed, or by optimizing how and when data is converted back and forth between `numpy` and `jax.numpy`.
 
 ## Running the examples
 
 There are two examples, one on simulated data and one on the [CDC BRFSS dataset](https://stanford.edu/~boyd/papers/optimal_representative_sampling.html). Both are due to the original package authors.
 
 ### Simulated
-To run the simulated example, after installing `rsw`, navigate to the `examples` folder and run:
+To run the simulated example, after installing `rswjax`, navigate to the `examples` folder and run:
 ```
 $ python simulated.py
 ```
@@ -150,7 +149,7 @@ Some possible ideas for contributing would be:
 
 `rswjax` was created by Andrew Timm. It is licensed under the terms of the Apache License 2.0 license.
 
-See the notice file for attributions due to the original `rsw` authors, whose code and paper are the primary origin of most logic in my package.
+See the NOTICE file for attributions due to the original `rsw` authors, whose code and paper are the primary origin of most logic in my package.
 
 ## Credits
 

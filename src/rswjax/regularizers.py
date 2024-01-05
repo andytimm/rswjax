@@ -1,10 +1,7 @@
 from jax import jit, lax
 import jax.numpy as jnp
-import numpy as np
-import scipy.sparse as sparse
 from functools import partial
 from rswjax.losses import *
-from rswjax.regularizers import *
 
 @jit
 def prox_zero_regularizer(w, lam):

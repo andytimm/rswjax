@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rswjax"
-version = "0.1.0"
+version = "1.0.0"
 description = "A jax implementation of optimal representative sample weighting"
 authors = ["Andrew Timm"]
 license = "Apache License 2.0"
@@ -21,6 +21,11 @@ ipykernel = "^6.27.1"
 pytest = "^7.4.3"
 cvxpy = "^1.4.1"
 matplotlib = "^3.8.2"
+sphinx = "^7.2.6"
+myst-nb = {version = "^1.0.0", python = "^3.9"}
+sphinx-autoapi = "^3.0.0"
+sphinx-rtd-theme = "^2.0.0"
+pytest-cov = "^4.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
