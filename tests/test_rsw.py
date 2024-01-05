@@ -47,6 +47,20 @@ def test_kl_reg():
     regularizer = rswjax.KLRegularizer(prior = fdes)
     rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
 
+# This is a common design pattern from the examples, and for handling very large numbers of columns
+def test_array_inputs():
+    funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+
+    array_of_inputs = np.array([25,.5,5.3])
+
+    losses = [rswjax.EqualityLoss(array_of_inputs.flatten())]
+    regularizer = rswjax.EntropyRegularizer()
+    rswjax.rsw(df, funs, losses, regularizer, 1., eps_abs=1e-8, verbose = True)
+
 def test_bool_weights():
     funs = [
         lambda x: x.age,
