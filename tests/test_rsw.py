@@ -26,7 +26,26 @@ def test_entropy_weights():
     regularizer = rswjax.EntropyRegularizer()
     w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
 
+def test_kl_loss():
+    losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+          rswjax.KLLoss(5.3,scale=1)]
+    regularizer = rswjax.EntropyRegularizer()
+    w, out, sol = rswjax.rsw(df, None, losses, regularizer, 1., eps_abs=1e-8, verbose = True)
 
+def test_kl_reg():
+    funs = [
+        lambda x: x.age,
+        lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+        lambda x: x.height
+    ]
+    
+    fdes = np.random.uniform(0, 1, size=100)
+    fdes /= fdes.sum()
+
+    losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
+            rswjax.EqualityLoss(5.3)]
+    regularizer = rswjax.KLRegularizer(prior = fdes)
+    rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
 
 def test_bool_weights():
     funs = [
@@ -37,8 +56,7 @@ def test_bool_weights():
     losses = [rswjax.LeastSquaresLoss(25), rswjax.LeastSquaresLoss(.5),
             rswjax.LeastSquaresLoss(5.3)]
     regularizer = rswjax.BooleanRegularizer(5)
-    w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
-    df["weight"] = w
+    rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
 
 def test_nans():
     for i, j in zip(np.random.randint(50, size=25), np.random.randint(3, size=25)):
@@ -52,4 +70,4 @@ def test_nans():
     losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
             rswjax.EqualityLoss(5.3)]
     regularizer = rswjax.EntropyRegularizer()
-    w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1.)
+    rswjax.rsw(df, funs, losses, regularizer, 1.)

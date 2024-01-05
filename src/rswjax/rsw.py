@@ -79,7 +79,7 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
          if len(out) != len(sol["f"]):
             print("losses/columns were not same length, not printing pct difference.")
          else:
-            max_diff = max_pct_difference(out, sol["f"])
+            max_diff = max_pct_difference(out, [l.fdes for l in losses])
             print(f"The largest pct difference between desired and achieved weighted values is {max_diff:.2f}%.")
 
         

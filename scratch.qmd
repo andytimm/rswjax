@@ -18,6 +18,8 @@ age = np.random.randint(20, 30, size=n) * 1.
 sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
 height = np.random.normal(5, 1, size=n)
 
+type(height)
+
 df = pd.DataFrame({
     "age": age,
     "sex": sex,
@@ -29,18 +31,66 @@ funs = [
     lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
     lambda x: x.height
 ]
+
+fdes = np.random.uniform(0, 1, size=100)
+fdes /= fdes.sum()
+
 losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5),
-          rswjax.EqualityLoss(5.3),
           rswjax.EqualityLoss(5.3)]
 regularizer = rswjax.EntropyRegularizer()
-w, out, sol = rswjax.rsw(df, None, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
+w, out, sol = rswjax.rsw(df, funs, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
 
 out
 
 ```
 
 ```{python}
-len(sol["f"])
+import pandas as pd
+import numpy as np
+from numpy import linalg
+import rswjax
+
+np.random.seed(5)
+n = 1000
+age = np.random.randint(20, 30, size=n) * 1.
+sex = np.random.choice([0., 1.], p=[.4, .6], size=n)
+height = np.random.normal(5, 1, size=n)
+
+type(height)
+
+df = pd.DataFrame({
+    "age": age,
+    "sex": sex,
+    "height": height
+})
+
+funs = [
+    lambda x: x.age,
+    lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+    lambda x: x.height
+]
+
+array_of_inputs = np.array([25,.5,5.3])
+
+losses = [rswjax.EqualityLoss(array_of_inputs.flatten())]
+regularizer = rswjax.EntropyRegularizer()
+w, out, sol = rswjax.rsw(df, funs, losses, regularizer, .01, eps_abs=1e-8, verbose = True)
+
+out
+```
+
+```{python}
+funs = [
+        lambda x: x.age,
+        lambda x: x.sex == 0 if not np.isnan(x.sex) else np.nan,
+        lambda x: x.height
+    ]
+losses = [rswjax.LeastSquaresLoss(25), rswjax.LeastSquaresLoss(.5),
+            rswjax.LeastSquaresLoss(5.3)]
+regularizer = rswjax.BooleanRegularizer(100)
+w, out, sol = rswjax.rsw(df, funs, losses, regularizer, 1., verbose=True)
+
+out
 ```
 
 ```{python}
