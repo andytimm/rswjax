@@ -2,8 +2,8 @@
 
 A [JAX](https://github.com/google/jax) implementation of optimal representative sample weighting, drawing heavily on the original `rsw` implementation of Barratt, Angeris, and Boyd ([rsw](https://github.com/cvxgrp/rsw/tree/master)).
 
-Thanks to rewriting some core operations in Jax, it is significantly faster than `rsw` for medium-large datasets, especially those with many columns (ex: 5k+ rows, 20+ columns). For more thoughts on performance, see the section below. In addition,
-it adds a number of quality of life improvements, like early stopping if optimization produces NaNs, warnings for common issues like not including loss functions for every column, and a
+Thanks to rewriting some core operations in JAX, it is significantly faster than `rsw` for medium-large datasets, especially those with many columns (ex: 5k+ rows, 20+ columns). For more thoughts on performance, see the section below. In addition,
+it adds a number of quality of life improvements, like early stopping if bad optimization produces NaNs, warnings for common issues like not including loss functions for every column, and a
 broader test suite.
 
 ## Installation
@@ -69,7 +69,7 @@ For more details on how one might use the package to do survey weighting, check 
 ## Performance
 
 `rswjax` is generally faster than `rsw` for medium-large datasets, especially those with many columns. As both packages take neglible amounts of time for data ~3k rows or less,
-`rswjax` should be superior for many but not all applications.
+`rswjax` should be superior for many but not all applications. Of course, having to also install JAX will not be worth it in many situations.
 
 Here is a simple scaling test in n (# of rows), with structure similar to the simulated example in `/examples`:
 
@@ -107,7 +107,7 @@ m=50- 60s
 m=100- 183s
 ```
 
-(Note that this test case uses randomly generated targets and data, and is therfore hard to weight in high dimensions. Thus, most well specified real world examples
+(Note that this test case uses randomly generated targets and data, and is therefore hard to weight in high dimensions. Thus, most well specified real world examples
 should run significantly faster due to early termination.)
 
 This speed is achieved by doing the core qdldl factorization and solve using the `qdldl` package, but using JITed ([just-in-time compiled](https://github.com/google/jax?tab=readme-ov-file#compilation-with-jit)) rewrites of many pieces of the admm solver, losses, and regularizers. There are still some minor opportunities to speed up the package by further refactoring the code to allow greater portions to be JITed, or by optimizing how and when data is converted back and forth between `numpy` and `jax.numpy`.
@@ -141,7 +141,7 @@ $ python brfss.py
 Interested in contributing? Check out the contributing guidelines. Please note that this project is released with a Code of Conduct. By contributing to this project, you agree to abide by its terms.
 
 Some possible ideas for contributing would be:
-1. making a jittable version of the steps to update *f* in the solver. This would require a decide amount of refactoring (so as to pass data instead of objects into the logic to update f, a requirement for jit).
+1. making a jittable version of the steps to update *f* in the solver. This would require a decent amount of refactoring (so as to pass data instead of objects into the logic to update f, a requirement for jit).
 2. Finding opportunities to convert data back and forth less from  `numpy` to `jax.numpy` and vice versa.
 3. Adding additional losses, regularizers, or examples.
 
