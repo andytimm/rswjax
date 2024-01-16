@@ -12,22 +12,20 @@ from rswjax.regularizers import *
 # It's possible mixed precision could be viable, but not worth the squeeze right now.
 jax.config.update("jax_enable_x64", True)
 
+# I've tried a few different other simplex projection algorithms which have better theoretical
+# time complexity, but in practice in JAX, this is the faster than the algorithms of
+# Blondel (https://mblondel.org/publications/mblondel-icpr2014.pdf), or
+# Condat (https://hal.science/hal-01056171v2/document).
 @jit
 def _projection_simplex(v, z=1):
-    n_features = v.shape[0]
     u = jnp.sort(v)[::-1]
-    cssv = jnp.cumsum(u) - z
-    ind = jnp.arange(n_features) + 1
-    cond = u - cssv / ind > 0
+    cssv = (jnp.cumsum(u) - z) / jnp.arange(1, v.shape[0] + 1)
+    rho = jnp.sum(u > cssv)
 
-    def last_true_index(carry, x):
-        idx, val = x
-        return lax.cond(val, lambda _: idx, lambda _: carry, None), None
-
-    rho, _ = lax.scan(last_true_index, 0, (ind, cond), length=n_features)
-    
-    # Compute theta safely, handling the case when cond is always False
-    theta = lax.cond(rho > 0, lambda _: cssv[rho - 1] / rho, lambda _: 0.0, None)
+    theta = lax.cond(rho > 0,
+                     lambda _: cssv[rho - 1],
+                     lambda _: 0.0,
+                     operand=None)
 
     w = jnp.maximum(v - theta, 0)
     return w
