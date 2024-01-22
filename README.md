@@ -75,36 +75,32 @@ Here is a simple scaling test in n (# of rows), with structure similar to the si
 
 ```
 rsw
-n=1,000- 109 ms ± 6.6 ms per loop (mean ± std. dev. of 7 runs)
-n=3,000- 461 ms ± 14 ms per loop (mean ± std. dev. of 7 runs)
-n=5,000- 1.72 s ± 155 ms per loop (mean ± std. dev. of 7 runs)
-n=10,000- 3.47 s ± 138 ms per loop (mean ± std. dev. of 7 runs)
-n=100,000- 43.7 s ± 508 ms per loop (mean ± std. dev. of 7 runs)
-n=1,000,000- 3min 28s ± 11.6 s per loop (mean ± std. dev. of 7 runs)
+n=1,000 - 109 ms ± 8.38 ms per loop (mean ± std. dev. of 7 runs)
+n=10,000 - 4.29 s ± 706 ms per loop (mean ± std. dev. of 7 runs)
+n=100,000 - 46.4 s ± 3.75 s per loop (mean ± std. dev. of 7 runs)
+n=1,000,000 - 3min 13s ± 6.78 s per loop (mean ± std. dev. of 7 runs)
 
 rswjax
-n=1,000- 284 ms ± 9.09 ms per loop (mean ± std. dev. of 7 runs)
-n=3,000- 832 ms ± 20.9 ms per loop (mean ± std. dev. of 7 runs)
-n=5,000- 1.4 s ± 28.1 ms per loop (mean ± std. dev. of 7 runs)
-n=10,000- 2.93 s ± 36.4 ms per loop (mean ± std. dev. of 7 runs)
-n=100,000- 9.77 s ± 84.3 ms per loop (mean ± std. dev. of 7 runs
-n=1,000,000- 1min 26s ± 1.03 s per loop (mean ± std. dev. of 7 runs)
+n=1,000 - 140 ms ± 10.2 ms per loop (mean ± std. dev. of 7 runs)
+n=10,000 - 1.24 s ± 123 ms per loop (mean ± std. dev. of 7 runs)
+n=100,000 - 2.71 s ± 235 ms per loop (mean ± std. dev. of 7 runs)
+n=1,000,000 - 24.6 s ± 579 ms per loop (mean ± std. dev. of 7 runs)
 ```
 
-For a rough sense of scaling in the number of columns m, consider these results on a simple test with n = 5000 rows, and m = 20/50/100 columns to weight on:
+For a rough sense of scaling in the number of columns m, consider these results on a simple test with n = 10,000 rows, and m = 20/50/100/200 columns to weight on:
 
 ```
-n = 5000, m = 20,50,100
+rsw
+m=20 - 28 s ± 7.47 s per loop (mean ± std. dev. of 7 runs)
+m=50 - 57.9 s ± 9.15 s per loop (mean ± std. dev. of 7 runs)
+m=100 - 1min 48s ± 9.62 s per loop (mean ± std. dev. of 7 runs)
+m=200 - 2min 22s ± 8.88 s per loop (mean ± std. dev. of 7 runs)
 
-rsw -
-m=20- 8.5s
-m=50-166s
-m=100- 448s
-
-rswjax -
-m=20- 7.4s
-m=50- 60s
-m=100- 183s
+rswjax
+m=20 - 5.64 s ± 357 ms per loop (mean ± std. dev. of 7 runs)
+m=50- - 7.59 s ± 692 ms per loop (mean ± std. dev. of 7 runs)
+m=100 - 32.3 s ± 915 ms per loop (mean ± std. dev. of 7 runs)
+m=200 - 1min 14s ± 6.6 s per loop (mean ± std. dev. of 7 runs)
 ```
 
 (Note that this test case uses randomly generated targets and data, and is therefore hard to weight in high dimensions. Thus, most well specified real world examples
