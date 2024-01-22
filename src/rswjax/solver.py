@@ -30,6 +30,17 @@ def _projection_simplex(v, z=1):
     w = jnp.maximum(v - theta, 0)
     return w
 
+def np_projection_simplex_sort(v, z=1):
+    n_features = v.shape[0]
+    u = np.sort(v)[::-1]
+    cssv = np.cumsum(u) - z
+    ind = np.arange(n_features) + 1
+    cond = u - cssv / ind > 0
+    rho = ind[cond][-1]
+    theta = cssv[cond][-1] / float(rho)
+    w = np.maximum(v - theta, 0)
+    return w
+
 @jit
 def compute_norms_and_epsilons(f, w, w_old, y, z, u, F, rho, eps_abs, eps_rel):
     # Norm calculations
@@ -97,7 +108,7 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, warm_start={}, verbose=False
             ct_cum += l.m
 
         w_tilde = reg.prox(w - z, lam / rho)
-        w_bar = _projection_simplex(w - u)
+        w_bar = np_projection_simplex_sort(w - u)
 
         rhs_np = np.concatenate([
             np.array(F.T @ (f + y) + w_tilde + z + w_bar + u),

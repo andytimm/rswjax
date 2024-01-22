@@ -53,14 +53,16 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
         for i in np.unique(rows_nan):
             F[i, cols_nan[rows_nan == i]] = desired[i]
 
-    
-    if m > len(losses):
-            print("warning! A loss is not defined for all columns, which is usually an error.\
-                   Please double check inputs and outputs for issues closely.")
-            
-    if m < len(losses):
-            print("warning! more losses are passed than columns, which is usually an error.\
-                   Please double check inputs and outputs for issues closely.")
+
+    total_fdes_length = sum(len(loss.fdes) for loss in losses)
+
+    if m > total_fdes_length:
+        print("Warning! A loss is not defined for all columns, which is usually an error. "
+            "Please double check inputs and outputs for issues closely.")
+
+    if m < total_fdes_length:
+        print("Warning! More losses are passed than columns, which is usually an error. "
+            "Please double check inputs and outputs for issues closely.")
 
     tic = time.time()
     sol = admm(F, losses, regularizer, lam, **kwargs)
@@ -76,7 +78,7 @@ def rsw(df, funs, losses, regularizer, lam=1, **kwargs):
         ct += m
 
     if kwargs.get("verbose"):
-         if len(out) != len(sol["f"]):
+         if total_fdes_length != len(sol["f"]):
             print("losses/columns were not same length, not printing pct difference.")
          else:
             max_diff = max_pct_difference(out, [l.fdes for l in losses])

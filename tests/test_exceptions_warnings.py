@@ -33,6 +33,10 @@ def funs():
         lambda x: x.height
     ]
 
+@pytest.fixture
+def regularizer_entropy():
+    return rswjax.EntropyRegularizer()
+
 def test_nan_from_admm_exception(data_frame, funs, losses, regularizer):
     with pytest.raises(ValueError) as e:
         rswjax.rsw(data_frame, funs, losses, regularizer, .000001, verbose=True)
@@ -44,7 +48,7 @@ def test_warn_too_many_losses(capsys, data_frame, regularizer):
     rswjax.rsw(data_frame, None, losses, regularizer, .01, eps_abs=1e-8, maxiter=1, verbose=True)
 
     captured = capsys.readouterr()
-    assert "more losses are passed" in captured.out
+    assert "More losses are passed" in captured.out
 
 def test_warn_too_few_losses(capsys, data_frame, regularizer):
     losses = [rswjax.EqualityLoss(25), rswjax.EqualityLoss(.5)]
@@ -53,3 +57,13 @@ def test_warn_too_few_losses(capsys, data_frame, regularizer):
 
     captured = capsys.readouterr()
     assert "A loss is not defined for all columns" in captured.out
+
+# Since users can input both eg rswjax.EqualityLoss(array_of_3_targets) and
+# 3 equality loss objects, must handle both cases
+def test_count_losses_for_array_input(capsys,data_frame, funs, regularizer_entropy):
+    array_of_targets = np.array([25, .5, 5.3])
+    losses = [rswjax.EqualityLoss(array_of_targets.flatten())]
+    rswjax.rsw(data_frame, funs, losses, regularizer_entropy, 1., eps_abs=1e-8, verbose=True)
+
+    captured = capsys.readouterr()
+    assert "warning" not in captured.out
