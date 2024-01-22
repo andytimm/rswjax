@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rswjax"
-version = "1.0.0"
+version = "1.1.0"
 description = "A jax implementation of optimal representative sample weighting"
 authors = ["Andrew Timm"]
 license = "Apache License 2.0"
