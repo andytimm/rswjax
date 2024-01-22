@@ -13,24 +13,12 @@ from rswjax.regularizers import *
 jax.config.update("jax_enable_x64", True)
 
 # I've tried a few different other simplex projection algorithms which have better theoretical
-# time complexity, but in practice in JAX, this is the faster than the algorithms of
-# Blondel (https://mblondel.org/publications/mblondel-icpr2014.pdf), or
-# Condat (https://hal.science/hal-01056171v2/document).
-@jit
+# time complexity, but in practice, this is the faster than the algorithms of
+# Blondel (https://mblondel.org/publications/mblondel-icpr2014.pdf),
+# Condat (https://hal.science/hal-01056171v2/document), or
+# Dai/Chen (https://arxiv.org/abs/2204.08153).
+# Numpy is ~5x faster than a JAX translation of this function too. 
 def _projection_simplex(v, z=1):
-    u = jnp.sort(v)[::-1]
-    cssv = (jnp.cumsum(u) - z) / jnp.arange(1, v.shape[0] + 1)
-    rho = jnp.sum(u > cssv)
-
-    theta = lax.cond(rho > 0,
-                     lambda _: cssv[rho - 1],
-                     lambda _: 0.0,
-                     operand=None)
-
-    w = jnp.maximum(v - theta, 0)
-    return w
-
-def np_projection_simplex_sort(v, z=1):
     n_features = v.shape[0]
     u = np.sort(v)[::-1]
     cssv = np.cumsum(u) - z
@@ -108,7 +96,7 @@ def admm(F, losses, reg, lam, rho=50, maxiter=5000, warm_start={}, verbose=False
             ct_cum += l.m
 
         w_tilde = reg.prox(w - z, lam / rho)
-        w_bar = np_projection_simplex_sort(w - u)
+        w_bar = _projection_simplex(w - u)
 
         rhs_np = np.concatenate([
             np.array(F.T @ (f + y) + w_tilde + z + w_bar + u),
