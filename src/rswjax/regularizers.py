@@ -75,3 +75,20 @@ class BooleanRegularizer():
 
     def prox(self, w, lam):
         return prox_boolean_regularizer(w, lam, self.k)
+
+@jit
+def prox_sum_squares(w, lam):
+    """
+    Proximal operator for the sum of squares regularizer.
+
+    Should allow regularization similar to Ben-Michael et al. (2023),
+    who use this regularizer in their multilevel calibration weights optimizer.
+    """
+    return w / (1 + 2 * lam)
+
+class SumSquaresRegularizer():
+    def __init__(self):
+        pass
+
+    def prox(self, w, lam):
+        return prox_sum_squares(w, lam)
