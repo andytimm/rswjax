@@ -43,3 +43,13 @@ def test_boolean_regularizer(setup_data):
     idx = np.argsort(w)[-k:]
     expected[idx] = 1.0 / k
     np.testing.assert_allclose(result, expected, atol=1e-4)
+
+def test_sum_squares_regularizer(setup_data):
+    w, _, lam = setup_data
+    sum_squares_reg = rswjax.SumSquaresRegularizer()
+    what = cp.Variable(10)
+    # Formulate the optimization problem for the sum of squares regularizer
+    cp.Problem(cp.Minimize(cp.sum_squares(what) + 1 /
+                           (2 * lam) * cp.sum_squares(what - w))).solve(solver=cp.ECOS)
+    # Compare the CVXPY solution with the proximal operator result
+    np.testing.assert_allclose(what.value, sum_squares_reg.prox(w, lam), atol=1e-4)
